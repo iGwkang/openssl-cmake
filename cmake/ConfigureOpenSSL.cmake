@@ -77,7 +77,7 @@ function(apply_ccache FILE)
         endif()
 
         file(READ ${FILE} MAKEFILE)
-        string(REGEX REPLACE "(\nCC=)([^\n]*)" "\\1\"${CCACHE}\" \"\\2\"" MAKEFILE "${MAKEFILE}")
+        string(REPLACE "\nCC=" "\nCC=\"${CCACHE}\" " MAKEFILE "${MAKEFILE}")
 
         if(MSVC)
             string(REPLACE "/Zi /Fdossl_static.pdb " "" MAKEFILE "${MAKEFILE}")
@@ -154,6 +154,16 @@ function(configure_openssl)
         REQUIRED
         NO_DEFAULT_PATH
     )
+
+    # When using Ninja to build or manually specifying CMAKE_C_COMPILER, CC is an absolute path.
+    # When using absolute paths, we need to enclose them in double quotes because the path may contain spaces.
+    # message(STATUS "CC=$ENV{CC}")
+    if (IS_ABSOLUTE $ENV{CC})
+        file(READ ${OPENSSL_MAKEFILE} MAKEFILE)
+        string(REGEX REPLACE "\nCC=([^\n]*)" "\nCC=\"\\1\"" MAKEFILE "${MAKEFILE}")
+        file(WRITE ${OPENSSL_MAKEFILE} "${MAKEFILE}")
+    endif()
+
     apply_ccache(${OPENSSL_MAKEFILE})
 
     if(WIN32 AND NOT OPENSSL_BUILD_VERBOSE)
